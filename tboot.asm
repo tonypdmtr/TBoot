@@ -989,7 +989,7 @@ Done@@              lda       #FPVIOL_|FACCERR_
 ?CopyrightMsg       fcc       'TBoot v{BOOTROM_VERSION(2)} (c) {:year} ASPiSYS'
           #ifexists checkout.inc
                     fcc       ' [Build '
-                    #Include  checkout.inc
+                    #Include  checkout.inc        ;(Fossil, Git, ...) checkout hash (optional)
                     fcc       ']'
           #endif
                     @?mcu     QE128,QE8,QE32,GB60,AC32,AC96,QD2,QD4,DZ32,DZ60,SH8,QG8
@@ -997,7 +997,7 @@ Done@@              lda       #FPVIOL_|FACCERR_
           #ifmmu
                     fcc       ' MMU'
           #endif
-                    fcb       0                   ;ASCII terminator
+                    fcb       0                   ;ASCIZ terminator
 
 ;*******************************************************************************
 ; Purpose: Initialize the MCU with MCU-specific settings for TBoot monitor
@@ -1014,7 +1014,7 @@ Done@@              lda       #FPVIOL_|FACCERR_
             #ifdef FTRIM_
                     lda       NVFTRIM
                     and       #FTRIM_
-              #ifdef DRS1_&DRS0_
+              #ifdef DRS1_&&DRS0_
                 #if MHZ >= 48
                     ora       #DRS1_              ;high DCO range (%01) x1536
                 #else if MHZ >= 32
@@ -1027,6 +1027,7 @@ Done@@              lda       #FPVIOL_|FACCERR_
                     lda       NVICGTRM
                     sta       ICGTRM
           #endif
+          ;--------------------------------------
           #ifdef _AC_
                     brclr     DCOS.,ICGS2,*       ;wait for stabilization
                     mov       #%00001100,ICGC1
@@ -1048,6 +1049,7 @@ Done@@              lda       #FPVIOL_|FACCERR_
 
                     brclr     LOCK.,ICGS1,*       ;wait for FLL lock
           #endif
+          ;--------------------------------------
           #ifdef _AC_
 SOPT_VALUE          def       %00110011
           #else              ; |||xxxxx
@@ -1068,6 +1070,7 @@ SOPT_VALUE          def       %00100010
           #endif
                     lda       #SOPT_VALUE
                     sta       SOPT                ;write-once register
+          ;--------------------------------------
 ;         #!ifz ]ICSC1
 ;                   mov       #%00000111|RDIV_,ICSC1
 ;                             ; |||||||+--------- IREFSTEN
@@ -1095,7 +1098,7 @@ SOPT_VALUE          def       %00100010
 ;                   bra       ?CopyRamCode
 
 ;*******************************************************************************
-; Purpose: Copy programming routine from Flash to RAM
+; Purpose: Copy programming routine from Flash to RAM as you can't program where code runs
 ; Input  : None
 ; Output : None
 ; Note(s):
@@ -1104,13 +1107,13 @@ SOPT_VALUE          def       %00100010
 ?CopyRamCode        proc
           #if ::?RAM_Code <= 256                  ;(most likely scenario)
                     ldhx      #::?RAM_Code        ;(do NOT use CLRH, LDX)
-Loop@@              lda       ?RAM_Code-1,x
-                    sta       ?burn_routine-1,x
+Loop@@              lda       ?RAM_Code-1,x       ;A = next code byte
+                    sta       ?burn_routine-1,x   ;save to RAM mirror
                     dbnzx     Loop@@              ;repeat for all bytes
           #else
                     clrhx
-Loop@@              lda       ?RAM_Code,x
-                    sta       ?burn_routine,x
+Loop@@              lda       ?RAM_Code,x         ;A = next code byte
+                    sta       ?burn_routine,x     ;save to RAM mirror
                     aix       #1                  ;point to next byte to process
                     cphx      #::?RAM_Code        ;are we done?
                     blo       Loop@@
@@ -1138,9 +1141,11 @@ Loop@@              lda       ?RAM_Code,x
 ?Start              proc
                     @rsp
                     @cop
+          ;-------------------------------------- ;for keeping pins in fail-safe state during TBoot
           #ifexists shutdown.tmp
-                    #Include  shutdown.tmp        ;do special shutdown instructions (if present)
+                    #Include  shutdown.tmp        ;include shutdown instructions (optional)
           #endif
+          ;--------------------------------------
                     bmc       ?Monitor            ;in user code entry ints are enabled
 
                     mov       #IRQPE_,IRQSC
@@ -1191,7 +1196,7 @@ Loop@@
                     cbeqa     #'E',Erase@@
                     cbeqa     #'L',Load@@
           #ifdef ENABLE_RUN
-                    cbeqa     #'R',Run@@
+                    cbeqa     #'R',Run@@          ;(useful mostly for debugging)
           #endif
                     bra       Fail@@              ;print ERROR on wrong cmd
           #ifdef ENABLE_RUN
@@ -1199,22 +1204,21 @@ Run@@               jsr       ?RunNow             ;we need JSR in case no code i
                     bra       Fail@@
           #endif
 Erase@@
-          #ifdef DISABLE_SURE
+          #ifdef DISABLE_SURE                     ;(limited Flash MCUs but not good for general use)
                     @?print   LF,'Erasing'
           #else
                     @?print   LF,'Sure?'
                     jsr       ?GetChar
-                    cmpa      #'Y'
+                    cmpa      #'Y'                ;(explictly uppercase to minimize accidents)
                     bne       Fail@@
                     @?print   CR,'Erasing'
           #endif
                     jsr       ?EraseFlash
-                    bcc       Loop@@
-                    bra       Fail@@
+                    bra       Cont@@
 
 Load@@              @?print   LF,'Loading'
                     jsr       ?LoadS19
-                    bcc       Loop@@
+Cont@@              bcc       Loop@@
 
 Fail@@              @?print   ' Error'
                     bra       Loop@@
