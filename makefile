@@ -41,9 +41,12 @@ ac96mmu : tboot_ac96mmu.s
 
 ################################################################################
 
-pdf: faq.pdf
+pdf: faq.pdf readme.pdf
 faq.pdf: faq.md
  @pandoc faq.md -t html -o $@
+
+readme.pdf:
+ @pandoc -f markdown+all_symbols_escapable+grid_tables -t html -o TBoot.pdf README.md
 
 ################################################################################
 
