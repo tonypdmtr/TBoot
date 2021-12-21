@@ -190,10 +190,10 @@ The following section shows all possible feedback codes.
 
 # Error codes during loading
 
-The following symbols indicate success, warning, or failure of each loaded S19/S29 record:
+The following symbols indicate success, warning, or failure of each loaded S19/S28 record:
 
 * `.` = Successful programming of S19 record (informational)
-* `!` = End of S19/S29 file (informational)
+* `!` = End of S19/S28 file (informational)
 * `C` = S19 record CRC failure (warning)
 * `F` = Flash programming failure (error)
 * `R` = S19 record address range violation (warning)
