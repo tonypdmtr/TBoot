@@ -8,7 +8,7 @@ HELP:
  @echo "* Targets: ALL GB60
  @echo "*          QG8 QE8 QE32 QE128 DZ32 DZ60 FL16 SH8 AC32 AC96
  @echo "*          QE128MMU AC96MMU
- @echo "*          PDF - Produce PDF for FAQ
+ @echo "*          PDF - Produce PDF for FAQ and TBOOT
  @echo "*********************************************************
  @echo "* Defines: DEBUG
  @echo "*********************************************************
@@ -41,12 +41,13 @@ ac96mmu : tboot_ac96mmu.s
 
 ################################################################################
 
-pdf: faq.pdf readme.pdf
+pdf: faq.pdf tboot.pdf
+
 faq.pdf: faq.md
  @pandoc faq.md -t html -o $@
 
-readme.pdf:
- @pandoc -f markdown+all_symbols_escapable+grid_tables -t html -o TBoot.pdf README.md
+tboot.pdf: README.md
+ @pandoc README.md -t html -o $@
 
 ################################################################################
 
