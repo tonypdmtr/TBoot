@@ -988,11 +988,14 @@ Done@@              lda       #FPVIOL_|FACCERR_
 ?CopyrightMsgCls    fcc       ASCII_FF,CR         ;a Form Feed and CR (for CLS)
 ?CopyrightMsg       fcc       'TBoot v{BOOTROM_VERSION(2)} (c) {:year} ASPiSYS'
           #ifexists checkout.inc
-                    fcc       ' [Build '
+                    fcc       ' ['
+            #ifndef _FL_
+                    fcc       'Build '
+            #endif
                     #Include  checkout.inc        ;(Fossil, Git, ...) checkout hash (optional)
                     fcc       ']'
           #endif
-                    @?mcu     QE128,QE8,QE32,GB60,AC32,AC96,QD2,QD4,DZ32,DZ60,SH8,QG8
+                    @?mcu     QE128,QE8,QE32,GB60,AC32,AC96,QD2,QD4,DZ32,DZ60,SH8,QG8,FL16
                     fcc       ' {HZ/1000(3)} MHz'
           #ifmmu
                     fcc       ' MMU'
@@ -1127,9 +1130,8 @@ Loop@@              lda       ?RAM_Code,x         ;A = next code byte
 ;                   ldhx      -2,x
 ; (where -2 is the appropriate object offset)
 ;*******************************************************************************
-          #ifdef _FL_&&!ID||!_FL_
+
                     dw        0                   ;indicates end of backward list since v1.20
-          #endif
                     dw        ?CopyrightMsg       ;@-2 Copyright ASCIZ string
 
 ;*******************************************************************************
