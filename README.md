@@ -88,9 +88,10 @@ memory region together with TBoot, you should be careful what you use.
 `HARD_FLOW_CONTROL` enables RTS/CTS control and requires the corresponding definition of
 `RTS_LINE` and `CTS_LINE` pins.  Unless your device is connected to equipment that
 requires hard flow control at all times, and cannot possibly function without it, you
-should disable this setting.  This way, TBoot will also allow updates when either flow
-control lines are damaged or disconnected.  Whether your application uses flow control or
-not is irrelevant as you can always update that to the other possibility at a later time.
+should leave this setting disabled.  This way, TBoot will also allow updates when flow
+control lines are either damaged or disconnected.  Whether your application uses flow
+control or not is irrelevant as you can always update that aspect to the alternate
+possibility at any later time.
 
 `RXINV` will invert the SCI RX line.  Some circuits require inversion to work correctly.
 
@@ -99,7 +100,7 @@ not is irrelevant as you can always update that to the other possibility at a la
 `BPS` overrides the default bits-per-second selection.  You can set it to one of the
 following standard bps rates: 300, 1200, 2400, 4800, 9600, 19200, 38400, 57600.  If you
 plan ahead, it would be preferrable to choose the same rate as that used by the application.
-This will make it easier for the end user to switch between TBoot and your application
+This will make it easier for the end-user to switch between TBoot and your application
 without having to re-adjust the terminal emulator's bps rate.
 
 `SCI` overrides the default SCI to use.  The default is the primary SCI (SCI1) or, for
@@ -122,7 +123,7 @@ entry to TBoot.
 
 This conditional is provided for those few cases where the IRQ pin is used by your
 application for free running signals that appear *before* any MCU initialization.
-Such condition could cause an inadverted entry into TBoot if the timing is unfortunate.
+Such condition could cause an inadvertent entry into TBoot if the timing is unfortunate.
 
 On the other hand, applications that use the IRQ pin after initialization of peripherals
 do not need to remove this functionality from TBoot.  TBoot is smart enough to release
@@ -146,7 +147,77 @@ Note: All assembly time options are fixed for the life of your product.  You can
       updates. For example, if the original version does not need to keep user
       configuration, you shouldn't just disable that without thinking ahead.
       What if you will need that in the future?
-      TBoot should be burned inside the end user's MCU to allow for that possibility.
+      TBoot should be burned inside the end-user's MCU to allow for that possibility.
+
+# Application requirements for use under TBoot
+
+There is minimal conformance required by your application in order to co-exist with
+TBoot without conflict.
+
+When assembling TBoot with the `-exp+` option, a `tboot.exp` file will be generated
+that contains various equates.  Some of these are mentioned below.
+
+* Application memory range:
+
+  All MCU RAM is available to your application.
+
+  All ROM between `APP_CODE_START` and `APP_CODE_END` inclusive is available for your
+  application code excluding the vectors.
+
+  Flash based user configuration (enabled by default) should be placed within `EEPROM`
+  and `EEPROM_END` inclusive.  You can disable user configuration (and gain the
+  corresponding memory for code use) by making the symbol `FLASH_DATA_SIZE` zero with an
+  `asm8 tboot -dFLASH_DATA_SIZE` like command.  A `FLASH_DATA_SIZE` of any (reasonable)
+  size will allocate as many Flash pages as required for your particular MCU variant.
+  You only need to give `FLASH_DATA_SIZE` the exact number of configuration bytes your
+  application will require.  Example: `asm8 tboot -dFLASH_DATA_SIZE=50`
+
+  Not all MCU variants use the exact same Flash page size.  The value of `FLASH_DATA_SIZE`
+  will be automatically rounded up to the next Flash page, whatever size that happens
+  to be for the chosen MCU.
+
+  Note: Before permanently disabling the user configuration Flash for your product,
+  you should carefully consider the possibility of requiring it in future upgrades
+  of your firmware.  If you do this wrong, the only way to update TBoot itself and
+  correct the issue is via the BDM port of your MCU, using appropriate hardware
+  (such as USBDM), and your end-user will most likely not be able to do that or
+  there would be no point for TBoot at all.  Also, (if you add custom encyption to
+  TBoot to secure the distribution of firmware images from product cloners) you
+  wouldn't want to give your custom TBoot image to the end-user, except as pre-loaded
+  into your product's MCU. Enough said.
+
+* Vector relocation:
+
+  Whether your particular MCU variant supports vector redirection or not, TBoot will
+  redirect all vectors using either hardware or software vector redirection.  The
+  original vectors are not updateable due to Flash protection, required to keep TBoot
+  from accidental erasure.  Also, the original reset vector must always point to TBoot
+  itself.
+
+  You may choose to place your interrupt vectors (including reset) either at their
+  default (`VECTORS`) or redirected (`RVECTORS`) location.  If you place them at
+  their default location, TBoot will move them to the matching redirected vectors.
+
+* MCU initialization:
+
+  TBoot is transparent, and it will enter your application with no changes to any
+  of the configuration registers.  This means your application needs to initialize
+  the MCU as if the MCU booted directly into it, and not assume any registers are
+  pre-set.
+
+  The only exception to the above is the non-volatile registers that control Flash
+  protection or security (e.g., backdoor), and are 'burned' into the MCU together
+  with TBoot.  You will not be able to alter these at a later time.  You need to
+  carefully choose those values during TBoot installation.
+
+* CPU clocks
+
+  TBoot always uses internal CPU clocks even if your application is based on external
+  clocks.  There is no need for TBoot to have the same clock as your application.
+  Besides, using only internal clocks guarantees TBoot will be available even in the
+  event the external clock malfunctions allowing you to possibly update the firmware
+  to a version that does not require external clocks as a temporary fix until the
+  hardware issue is resolved, thus minimizing equipment downtime.
 
 # Assembly
 
@@ -176,23 +247,23 @@ TBoot can optionally `#include` up to two files, if present during assembly.
 These files may be generated on the fly by `MAKE` or other utilities.
 
 * If present, `checkout.inc` is expected to contain a single ` FCC 'hashhash'`
-assembler statement. Note the leading space before `FCC` to make it a valid ASM8
-statement. The 'hashhash' part is the commit hash of the particular checkout.
-This hash will appear with the copyright message and can help determine which
-exact TBoot version is loaded into a device.
+  assembler statement. Note the leading space before `FCC` to make it a valid ASM8
+  statement. The 'hashhash' part is the commit hash of the particular checkout.
+  This hash will appear with the copyright message and can help determine which
+  exact TBoot version is loaded into a device.
 
 * If present, `shutdown.tmp` is expected to contain whatever ASM8 instructions are
-required to keep the device in a fail-safe state.  This can include commands to place
-specific port pins into a given state so as to keep things from malfunctioning during
-the firmware upgrade process.  Usually, `BSET` and/or `BCLR` instructions are used to
-turn specific pins into high/low outputs.  These instructions are executed as soon as
-possible after entry to TBoot, either by reset or application.
+  required to keep the device in a fail-safe state.  This can include commands to place
+  specific port pins into a given state so as to keep things from malfunctioning during
+  the firmware upgrade process.  Usually, `BSET` and/or `BCLR` instructions are used to
+  turn specific pins into high/low outputs.  These instructions are executed as soon as
+  possible after entry to TBoot, either by reset or application.
 
-Care should be taken not to inadvertedly flip the CCR[I] bit which is used afterwards
-to determine whether TBoot was entered by reset or the application.
+  Care should be taken not to inadvertently flip the CCR[I] bit which is used afterwards
+  to determine whether TBoot was entered by reset or the application.
 
-In general, the code in this file should be the shortest possible and not do anything
-that isn't truly necessary.
+  In general, the code in this file should be the shortest possible and not do anything
+  that isn't truly necessary.
 
 # End-user experience
 
@@ -212,21 +283,21 @@ If nothing but dots appear, s/he knows the update went well.
 
 The following section shows all possible feedback codes.
 
-# Error codes during loading
+# Feedback during firmware loading
 
 The following symbols indicate success, warning, or failure of each loaded S19/S28 record:
 
-* `.` = Successful programming of S19 record (informational)
+* `.` = Successful programming of S19/S28 record (informational)
 * `!` = End of S19/S28 file (informational)
 * `C` = S19 record CRC failure (warning)
 * `F` = Flash programming failure (error)
 * `R` = S19 record address range violation (warning)
 
-Warnings may not necessarily result in bad code loaded.
+Warnings may not necessarily result in unused code loaded.
 
 As an example, a failed CRC may be the result of user error (e.g., editing the S19 file
 accidentally), or momentary SCI error (especially with the lower accuracy of the
-software SCI) due to noise.
+software SCI) due to noise on the CRC byte alone.
 
 A range violation may happen if, for example, you try to load the user configuration
 area with defaults, but TBoot was assembled not to allow that.
