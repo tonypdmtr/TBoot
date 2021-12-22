@@ -170,6 +170,30 @@ For example (assuming default ASM8 configuration):
 will assemble TBoot for 9S08QE128 with MMU support and produce an export file to be
 used (`#Uses` or `#Include`) by the application.
 
+# Optional includes
+
+TBoot can optionally `#include` up to two files, if present during assembly.
+These files may be generated on the fly by `MAKE` or other utilities.
+
+* If present, `checkout.inc` is expected to contain a single ` FCC 'hashhash'`
+assembler statement. Note the leading space before `FCC` to make it a valid ASM8
+statement. The 'hashhash' part is the commit hash of the particular checkout.
+This hash will appear with the copyright message and can help determine which
+exact TBoot version is loaded into a device.
+
+* If present, `shutdown.tmp` is expected to contain whatever ASM8 instructions are
+required to keep the device in a fail-safe state.  This can include commands to place
+specific port pins into a given state so as to keep things from malfunctioning during
+the firmware upgrade process.  Usually, `BSET` and/or `BCLR` instructions are used to
+turn specific pins into high/low outputs.  These instructions are executed as soon as
+possible after entry to TBoot, either by reset or application.
+
+Care should be taken not to inadvertedly flip the CCR[I] bit which is used afterwards
+to determine whether TBoot was entered by reset or the application.
+
+In general, the code in this file should be the shortest possible and not do anything
+that isn't truly necessary.
+
 # End-user experience
 
 For the end-user, firmware updates should be easier than sending the product back to
