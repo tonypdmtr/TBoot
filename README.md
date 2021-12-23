@@ -11,7 +11,7 @@ I do not recommend porting to other assemblers as there are too many dependencie
 specific ASM8 syntax features and/or idioms which may be very hard to express in most
 other assemblers.
 
-(That does not restrict your application to be in whatever language and tools you prefer.)
+(That does not restrict your application to use whatever language and tools you prefer.)
 
 # Overview
 
@@ -39,7 +39,7 @@ Due to the nature of S19/S28 files, one could even carefully type in the firmwar
 from a magazine page).  Tedious, but not impossible.
 
 TBoot is written 100% in optimized assembly language offering both very low reset-to-app
-latency, and tiny memory footprint.
+latency, and a tiny memory footprint.
 
 For most MCU configurations, it takes less than two full Flash pages (1KB in most 9S08
 MCUs) of your precious application Flash memory.
@@ -48,7 +48,7 @@ TBoot will redirect all vectors to your application using either hardware vector
 redirection (where available) or low-overhead software vector redirection.
 
 TBoot has been shipped with a wide variety of commercial products for over ten years
-with excellent performance.
+with excellent results.
 
 # Assembly-time conditionals
 
@@ -109,20 +109,21 @@ MCUs without hardware SCI, the software SCI (-1)
 For the few MCU variants that lack a hardware SCI, a bit-banged software SCI driver is
 used.  You should use relatively low bps speeds with those to avoid dropping characters.
 
-For software SCI to work you will have to define `SCI_TX_PIN` and `SCI_RX_PIN`
-to whichever port pin can support regular I/O.
+For software SCI to work you will have to define `SCI_TX_PIN` and `SCI_RX_PIN` as pins
+(`pin` pseudo-op or `-d` assembler option) to whichever port pin can support regular I/O.
 
 `ENABLE_RUN` enables an extra `[R]un` command which lets you run the loaded application
 without resetting the MCU.  This is a deprecated feature meant mostly for some
-debugging scenarios.  It's use is NOT recommended.
+debugging scenarios.  It's use is NOT recommended, and it will most likely be removed
+in future versions.
 
 `NO_IRQ` disables the startup IRQ pin test for forced entry to TBoot.  A low IRQ during
 startup is the primary and ***recommended*** method of entry to TBoot.  It has the advantage
 of always succeeding even if your application is faulty enough to not allow software
 entry to TBoot.
 
-This conditional is provided for those few cases where the IRQ pin is used by your
-application for free running signals that appear *before* any MCU initialization.
+This conditional option is provided for those few cases where the IRQ pin is used by
+your application for free running signals that appear *before* any MCU initialization.
 Such condition could cause an inadvertent entry into TBoot if the timing is unfortunate.
 
 On the other hand, applications that use the IRQ pin after initialization of peripherals
@@ -139,14 +140,14 @@ squeeze the overall size down a bit.
 In general, however, you would want a strong confirmation by the end-user to proceed
 with the Erase action.
 
-`DEBUG` is meant to enable debugging definition and/or code.
+`DEBUG` is meant to enable debugging definitions and/or code.
 It is currently not used at all in the public version of TBoot so you can ignore it.
 
 Note: All assembly time options are fixed for the life of your product.  You cannot
-      make changes afterwards.  So, choose wisely to accommodate for possible future
+      make changes afterwards.  Choose wisely to accommodate for possible future
       updates. For example, if the original version does not need to keep user
       configuration, you shouldn't just disable that without thinking ahead.
-      What if you will need that in the future?
+      What if you will need that capability in the future?
       TBoot should be burned inside the end-user's MCU to allow for that possibility.
 
 # Application requirements for use under TBoot
@@ -162,10 +163,11 @@ that contains various equates.  Some of these are mentioned below.
   All MCU RAM is available to your application.
 
   All ROM between `APP_CODE_START` and `APP_CODE_END` inclusive is available for your
-  application code excluding the vectors.
+  application code.  This excludes vectors that have their own separate space outside
+  the mentioned range.
 
   Flash based user configuration (enabled by default) should be placed within `EEPROM`
-  and `EEPROM_END` inclusive.  You can disable user configuration (and gain the
+  and `EEPROM_END` inclusive.  You can disable user configuration (and free the
   corresponding memory for code use) by making the symbol `FLASH_DATA_SIZE` zero with an
   `asm8 tboot -dFLASH_DATA_SIZE` like command.  A `FLASH_DATA_SIZE` of any (reasonable)
   size will allocate as many Flash pages as required for your particular MCU variant.
@@ -188,15 +190,16 @@ that contains various equates.  Some of these are mentioned below.
 
 * Vector relocation:
 
-  Whether your particular MCU variant supports vector redirection or not, TBoot will
+  Whether or not your particular MCU variant supports vector redirection, TBoot will
   redirect all vectors using either hardware or software vector redirection.  The
-  original vectors are not updateable due to Flash protection, required to keep TBoot
+  original vectors are not updateable due to Flash protection, required to save TBoot
   from accidental erasure.  Also, the original reset vector must always point to TBoot
   itself.
 
   You may choose to place your interrupt vectors (including reset) either at their
-  default (`VECTORS`) or redirected (`RVECTORS`) location.  If you place them at
-  their default location, TBoot will move them to the matching redirected vectors.
+  default (`VECTORS`) or the redirected (`RVECTORS`) location.  If you place them at
+  their default location, TBoot will move them to the matching redirected vectors
+  during loading of the respective S19 record.
 
 * MCU initialization:
 
