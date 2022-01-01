@@ -24,10 +24,10 @@ A device that needs to be upgraded years after it was put into service is often 
 unable to perform the upgrade due to the original upgrade companion application failing
 to run in later PC/OS and/or hardware combinations than for which it was designed.
 
-With TBoot, the end-user may have any PC/OS. or other type of device that can send ASCII
+With TBoot, the end-user may have any PC/OS, or other type of device that can send ASCII
 text over serial communications, and still be able to perform the firmware update.
 
-TBoot is safe in that only the S19 firmware ASCII file is required.
+TBoot is safe in that only the S19/S28 firmware ASCII file is required.
 Any terminal emulation program can be used to connect to the device, enter TBoot, and
 transfer the firmware with a simple copy-paste operation.  Example: User clicks on
 the firmware website link, the firmware file opens up as text page, the user presses
@@ -47,8 +47,8 @@ MCUs) of your precious application Flash memory.
 TBoot will redirect all vectors to your application using either hardware vector
 redirection (where available) or low-overhead software vector redirection.
 
-TBoot has been shipped with a wide variety of commercial products for over ten years
-with excellent results.
+TBoot has proven itself for over ten years to perform as expected in a wide variety of
+commercial products.
 
 # Assembly-time conditionals
 
@@ -292,9 +292,9 @@ The following symbols indicate success, warning, or failure of each loaded S19/S
 
 * `.` = Successful programming of S19/S28 record (informational)
 * `!` = End of S19/S28 file (informational)
-* `C` = S19 record CRC failure (warning)
+* `C` = S19/S28 record CRC failure (warning)
 * `F` = Flash programming failure (error)
-* `R` = S19 record address range violation (warning)
+* `R` = S19/S28 record address range violation (warning)
 
 Warnings may not necessarily result in unused code loaded.
 
@@ -312,3 +312,5 @@ Of course, it could happen when attempting to load a completely irrelevant firmw
 If you would like to contibute support for additional MCU variants, please contact me with
 pull requests.  Make all your work in a separate, uniquely named branch, such as your
 [nick]name for easier management by both parties.
+
+*Last update: January 1, 2022*
